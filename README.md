@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/duguyue100/transcaffe.svg?branch=master)](https://travis-ci.org/duguyue100/transcaffe)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/25e8a4861ed246b69d6576bf74d79221)](https://www.codacy.com/app/duguyue100/transcaffe?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=duguyue100/transcaffe&amp;utm_campaign=Badge_Grade)
 
 # TransCaffe
 
