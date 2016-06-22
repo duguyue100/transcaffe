@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/duguyue100/transcaffe.svg?branch=master)](https://travis-ci.org/duguyue100/transcaffe)
+
 # TransCaffe
 
 This is a minor task while I work on my other project.
