@@ -266,3 +266,20 @@ def get_bias(blobs):
         a vector that contains bias of the layer
     """
     return get_bias_raw(blobs)
+
+
+def check_phase(layer, phase):
+    """Check if the layer matches with the target phase.
+
+    Parameters
+    ----------
+    layer : caffe_pb2.V1LayerParameter
+        A given layer.
+    phase : int
+        0: train
+        1: test
+    """
+    try:
+        return True if layer.include[0].phase == phase else False
+    except IndexError:
+        return True

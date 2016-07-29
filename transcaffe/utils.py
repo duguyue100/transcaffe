@@ -4,6 +4,7 @@ Author: Yuhuang Hu
 Email : duguyue100@gmail.com
 """
 
+from __future__ import print_function
 import os
 
 
@@ -48,3 +49,25 @@ def dir_checker(dir_name, make_dir=False):
             raise ValueError("Directory %s is not existed!" % (dir_name))
 
     return True
+
+
+def keras_model_writer(model, save_path, filename):
+    """Save a valid keras model to given path.
+
+    Parameters
+    ----------
+    model :
+        A Keras model
+    save_path : string
+        A given path
+    filename : string
+        A given name of the model (without extension)
+    """
+    dir_checker(save_path, make_dir=True)
+
+    print("[MESSAGE] The target Keras model is saving...")
+    open(os.path.join(save_path, filename+".json"),
+         mode="w").write(model.to_json())
+
+    model.save_weights(os.path.join(save_path, filename+".h5"), overwrite=True)
+    print("[MESSAGE] The model %s is saved at %s" % (filename, save_path))
