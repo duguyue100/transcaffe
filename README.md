@@ -15,6 +15,14 @@ the second stage, I would like to develop a more obvious network coding
 and save it into HDF5 format. On the final stage, I hope that I can create
 a model zoo where I deliver this HDF5 format data.
 
+__DEVELOPMENT__: Keras obviously provides a much more mature organization on
+saving trained models. My further development is inspired by one recent
+development by [MarcBS's Caffe2Keras module](https://github.com/MarcBS/keras/tree/master/keras/caffe).
+It seems that MarcBS's implementation has some unstable points.
+Once I somehow replicated his parser, I would soon publish a set of
+tested conversion. And if it's possible, I would like to poring it to other
+popular libraries too.
+
 ## Todo List
 
 -   [ ] parse the prototxt
