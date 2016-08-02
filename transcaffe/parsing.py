@@ -14,6 +14,8 @@ from scipy.io import loadmat
 from transcaffe import caffe_pb2, utils
 from google.protobuf.text_format import Merge
 
+from keras.models import Model
+
 from transcaffe import layers as L
 
 v1_map = {0: 'NONE', 1: 'ACCURACY', 2: 'BNLL', 3: 'CONCAT', 4: 'CONVOLUTION',
@@ -465,7 +467,7 @@ def get_output_layers(network):
     return out_layers
 
 
-def get_model(layers, phase, input_dim, lib_type="keras"):
+def get_model(layers, phase, input_dim, model_name, lib_type="keras"):
     """Get a model by given network parameters.
 
     Parameters
@@ -477,6 +479,8 @@ def get_model(layers, phase, input_dim, lib_type="keras"):
         1 : test
     input_dim : list
         the input dimension
+    model_name : string
+        the name of the given model.
     lib_type : string
         currently only Keras is supported.
     """
@@ -583,3 +587,13 @@ def get_model(layers, phase, input_dim, lib_type="keras"):
                                           strides=(stride_h, stride_w),
                                           pool_type=layer.pooling_param.pool,
                                           name=layer_name)(layer_in)
+
+    in_l = [None]*(len(in_layers))
+    out_l = [None]*(len(out_layers))
+
+    for i in xrange(len(in_layers)):
+        in_l[i] = net[in_layers[i]]
+    for i in xrange(len(out_layers)):
+        out_l[i] = net[out_layers[i]]
+
+    return Model(input=in_l, output=out_l, name=model_name)
