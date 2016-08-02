@@ -335,7 +335,6 @@ def get_network(layers, phase):
             network[layer_id].extend(next_blobs)
 
     network = remove_loops(network)
-    print (network)
     network = remove_blobs(network)
 
     return network
@@ -500,9 +499,8 @@ def get_model(layers, phase, input_dim, model_name, lib_type="keras"):
             if out_idx in network[in_idx] and data_layer(layers[in_idx]):
                 network[in_idx].remove[out_idx]
     net = [None]*(max(network)+1)
-
     for layer_id in network:
-        layer = network[layer_id]
+        layer = layers[layer_id]
         layer_name = layer.name
         layer_type = get_layer_type(layer)
 
@@ -512,9 +510,6 @@ def get_model(layers, phase, input_dim, model_name, lib_type="keras"):
             layer_in = [None]*(len(rev_network[layer_id]))
             for l in xrange(len(rev_network[layer_id])):
                 layer_in[l] = net[rev_network[layer_id][l]]
-            layer_in_names = []
-            for l in rev_network[layer_id]:
-                layer_in_names.append(layers[l].name)
 
             if layer_type in ["relu", "sigmoid", "softmax", "softmaxwithloss",
                               "split", "tanh"]:

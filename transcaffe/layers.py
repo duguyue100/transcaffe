@@ -62,7 +62,7 @@ def dropout(prob, name):
     dropout : keras.layers.core.Dropout
     """
     if LIB_TYPE == "keras":
-        return Dropout(prob, name=name)
+        return Dropout(p=prob, name=name)
 
 
 def flatten(name):
@@ -96,7 +96,7 @@ def dense(out_dim, name):
     dense : keras.layers.core.Dense
     """
     if LIB_TYPE == "keras":
-        return Dense(out_dim, name)
+        return Dense(output_dim=out_dim, name=name)
 
 
 def batch_norm(epsilon, axis, name):
@@ -157,9 +157,13 @@ def pooling(pool_size, strides, pool_type, name, border_mode="valid"):
     """
     if LIB_TYPE == "keras":
         if pool_type == 0:
-            return MaxPooling2D(pool_size, strides, border_mode, name=name)
+            return MaxPooling2D(pool_size=pool_size,
+                                strides=strides,
+                                border_mode=border_mode, name=name)
         elif pool_type == 1:
-            return AveragePooling2D(pool_size, strides, border_mode, name=name)
+            return AveragePooling2D(pool_size=pool_size,
+                                    strides=strides,
+                                    border_mode=border_mode, name=name)
 
 
 def convolution(num_filter, num_row, num_col, bias, subsample, name):
@@ -195,10 +199,10 @@ def input_layer(shape, name):
 
     Parameters
     ----------
-    shape : list
+    shape : tuple
         the input shape.
     name : string
         the name of the input layer
     """
     if LIB_TYPE == "keras":
-        return Input(shape, name)
+        return Input(shape=shape, name=name)
