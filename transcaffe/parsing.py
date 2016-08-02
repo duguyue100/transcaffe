@@ -195,94 +195,12 @@ def get_input_size(net_param):
     else:
         print("[MESSAGE] Couldn't find Input shape in the Network Parameters."
               "The returned shape is inferenced from the network name")
+        # try:
+        #     scale = layer.transform_param.scale
+        #     scale = 1 if scale <= 0 else scale
+        # except AttributeError:
+        #     pass
         return []
-
-
-def get_weights_raw(blobs):
-    """Get raw weights data from given layer blobs.
-
-    Parameters
-    ----------
-    blobs : list
-        the blobs that defines weights and bias
-
-    Returns
-    -------
-    raw_weights : numpy.ndarray
-        a vector that contains weights of the layer
-    """
-    if len(blobs) > 0:
-        return np.array(blobs[0].data)
-    else:
-        return None
-
-
-def get_weights(blobs, n_filters=None, n_channels=None, height=None,
-                width=None, mode="conv"):
-    """Get weight matrix from given layer blobs.
-
-    Parameters
-    ----------
-    blobs : list
-        the blobs that defines weights and bias
-        mode:
-            "conv": convolution layer
-                arrange in (num. filters, num. channels, height, width)
-
-    Returns
-    -------
-    weights : numpy.ndarray
-        a vector that contains weights of the layer
-    """
-    raw_weights = get_weights_raw(blobs)
-    if raw_weights is not None:
-        if mode == "conv":
-            if n_filters is None or n_channels is None \
-               or height is None or height is None:
-                raise Exception("Lack parameters for defining convolutional "
-                                "filters.")
-
-        weights = raw_weights.reshape((n_filters, n_channels,
-                                       height, width))
-
-        return weights
-    else:
-        return raw_weights
-
-
-def get_bias_raw(blobs):
-    """Get raw bias data from given layer blobs.
-
-    Parameters
-    ----------
-    blobs : list
-        the blobs that defines weights and bias
-
-    Returns
-    -------
-    raw_bias : numpy.ndarray
-        a vector that contains bias of the layer
-    """
-    if len(blobs) > 1:
-        return np.array(blobs[1].data)
-    else:
-        return None
-
-
-def get_bias(blobs):
-    """Get bias data from given layer blobs.
-
-    Parameters
-    ----------
-    blobs : list
-        the blobs that defines weights and bias
-
-    Returns
-    -------
-    bias : numpy.ndarray
-        a vector that contains bias of the layer
-    """
-    return get_bias_raw(blobs)
 
 
 def check_phase(layer, phase):
@@ -592,3 +510,135 @@ def get_model(layers, phase, input_dim, model_name, lib_type="keras"):
         out_l[i] = net[out_layers[i]]
 
     return Model(input=in_l, output=out_l, name=model_name)
+
+
+def get_network_weights(layers, version):
+    """Parse network weights.
+
+    Parameters
+    ----------
+    layers : list
+        List of parameter layers from caffemodel
+    version : "string"
+        "V1" or "V2"
+
+    Return
+    ------
+    net_weights : OrderedDict
+        network's weights
+    """
+    net_weights = OrderedDict()
+
+    for layer in layers:
+        layer_type = get_layer_type(layer)
+
+        if layer_type == "innerproduct":
+            blobs = layer.blobs
+
+            if (version == "V1"):
+                num_filters = blobs[0].num
+                num_channels = blobs[0].channels
+                num_col = blobs[0].height
+                num_row = blobs[0].width
+            elif (version == "V2"):
+                if (len(blobs[0].shape.dim) == 4):
+                    num_filters = int(blobs[0].shape.dim[0])
+                    num_channels = int(blobs[0].shape.dim[1])
+                    num_col = int(blobs[0].shape.dim[2])
+                    num_row = int(blobs[0].shape.dim[3])
+                else:
+                    num_filters = 1
+                    num_channels = 1
+                    num_col = int(blobs[0].shape.dim[0])
+                    num_row = int(blobs[0].shape.dim[1])
+            else:
+                raise Exception("Can't recognize the version %s" % (version))
+
+            W = np.array(blobs[0].data).reshape(num_filters, num_channels,
+                                                num_col, num_row)[0, 0, :, :]
+            W = W.T
+            b = np.array(blobs[1].data)
+            layer_weights = [W.astype(dtype=np.float32),
+                             b.astype(dtype=np.float32)]
+
+            net_weights[layer.name] = layer_weights
+        elif layer_type == "convolution":
+            blobs = layer.blobs
+
+            if (version == "V1"):
+                num_filters = blobs[0].num
+                num_channels = blobs[0].channels
+                num_col = blobs[0].height
+                num_row = blobs[0].width
+            elif (version == "V2"):
+                num_filters = int(blobs[0].shape.dim[0])
+                num_channels = int(blobs[0].shape.dim[1])
+                num_col = int(blobs[0].shape.dim[2])
+                num_row = int(blobs[0].shape.dim[3])
+            else:
+                raise Exception("Can't recognize the version %s" % (version))
+
+            num_group = layer.convolution_param.group
+            num_channels *= num_group
+
+            W = np.zeros((num_filters, num_channels, num_col, num_row))
+
+            if layer.convolution_param.bias_term:
+                b = np.array(blobs[1].data)
+            else:
+                b = None
+
+            group_ds = len(blobs[0].data) // num_group
+            ncs_group = num_channels // num_group
+            nfs_group = num_filters // num_group
+
+            for i in range(num_group):
+                group_weights = W[i*nfs_group: (i+1)*nfs_group,
+                                  i*ncs_group: (i+1)*ncs_group, :, :]
+                group_weights[:] = np.array(
+                    blobs[0].data[i*group_ds:
+                                  (i+1)*group_ds]).reshape(group_weights.shape)
+
+            for i in range(W.shape[0]):
+                for j in range(W.shape[1]):
+                    W[i, j] = np.rot90(W[i, j], 2)
+
+            if b is not None:
+                layer_weights = [W.astype(dtype=np.float32),
+                                 b.astype(dtype=np.float32)]
+            else:
+                layer_weights = [W.astype(dtype=np.float32)]
+
+            net_weights[layer.name] = layer_weights
+        elif layer_type == "batchnorm":
+            blobs = layer.blobs
+
+            if (version == "V2"):
+                num_kernels = int(blobs[0].shape.dim[0])
+            else:
+                raise NotImplementedError("Batchnorm is not "
+                                          "implemented in %s" % (version))
+            W_mean = np.array(blobs[0].data)
+            W_std = np.array(blobs[1].data)
+
+            net_weights[layer.name] = [np.ones(num_kernels),
+                                       np.zeros(num_kernels),
+                                       W_mean.astype(dtype=np.float32),
+                                       W_std.astype(dtype=np.float32)]
+
+    return net_weights
+
+
+def build_model(model, net_weights):
+    """Load network's weights to model.
+
+    Parameters
+    ----------
+    model : keras.models.model
+        The model structure of Keras
+    net_weights : OrderedDict
+        networ's weights
+    """
+    for layer in model.layers:
+        if layer.name in net_weights:
+            model.get_layer(layer.name).set_weights(net_weights[layer.name])
