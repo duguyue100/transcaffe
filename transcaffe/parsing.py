@@ -7,6 +7,7 @@ Email : duguyue100@gmail.com
 """
 
 from __future__ import print_function
+from collections import OrderedDict
 
 import numpy as np
 from scipy.io import loadmat
@@ -110,8 +111,20 @@ def parse_protobuf(filename):
 
     f = open(filename, mode="rb")
     net_param = caffe_pb2.NetParameter()
+
+    net_def = f.read()
+    # append quotes around type information if needed.
+    # it seems not working because has newer definititon?
+    # net_def = f.read().split("\n")
+    # for i, line in enumerate(net_def):
+    #     l = line.strip().replace(" ", "").split('#')[0]
+    #     if len(l) > 6 and l[:5] == 'type:' and l[5] != "\'" and l[5] != '\"':
+    #         type_ = l[5:]
+    #         net_def[i] = '  type: "' + type_ + '"'
+    #
+    # net_def = '\n'.join(net_def)
     # Check before Merge? For V1?
-    Merge(f.read(), net_param)
+    Merge(net_def, net_param)
     f.close()
 
     return net_param
@@ -276,10 +289,116 @@ def check_phase(layer, phase):
     layer : caffe_pb2.V1LayerParameter
         A given layer.
     phase : int
-        0: train
-        1: test
+        0 : train
+        1 : test
     """
     try:
         return True if layer.include[0].phase == phase else False
     except IndexError:
         return True
+
+
+def get_network(layers, phase):
+    """Get structure of the network.
+
+    Parameters
+    ----------
+    layers : list
+        list of layers parsed from network parameters
+    phase : int
+        0 : train
+        1 : test
+    """
+    num_layers = len(layers)
+    network = OrderedDict()
+
+    for i in xrange(num_layers):
+        layer = layers[i]
+        if check_phase(layer, phase):
+            layer_id = "trans_layer_"+str(i)
+            if layer_id not in network:
+                network[layer_id] = []
+            prev_blobs = map(str, layer.bottom)
+            next_blobs = map(str, layer.top)
+
+            for blob in prev_blobs+next_blobs:
+                if blob not in network:
+                    network[blob] = []
+
+            for blob in prev_blobs:
+                network[blob].append(layer_id)
+
+            network[layer_id].extend(next_blobs)
+
+    network = remove_loops(network)
+    print (network)
+    network = remove_blobs(network)
+
+    return network
+
+
+def remove_loops(network):
+    """Remove potential loops from the network.
+
+    Parameters
+    ----------
+    network : OrderedDict
+        given network dictionary
+
+    new_network : OrderedDict
+        a loops free altered network.
+    """
+    for e in network:
+        if e.startswith("trans_layer_"):
+            continue
+
+        idx = 0
+        while idx < len(network[e]):
+            next_e = network[e][idx]
+
+            if e in network[next_e]:
+                new_e = e+"_"+str(idx)
+                network[e].remove(next_e)
+                network[new_e] = network[e]
+                network[e] = [next_e]
+                network[next_e] = [new_e]
+
+                for n in network[new_e]:
+                    if network[n] == [e]:
+                        network[n] = [new_e]
+
+                e = new_e
+                idx = 0
+            else:
+                idx += 1
+
+    return network
+
+
+def remove_blobs(network):
+    """Remove blobs from network.
+
+    Parameters
+    ----------
+    network : OrderedDict
+        given network dictionary
+
+    Returns
+    -------
+    new_network : OrderedDict
+        blobs removed network dictionary
+    """
+    new_network = OrderedDict()
+
+    def get_idx(x): return int(x[12:])
+    for e in network:
+        if e.startswith("trans_layer_"):
+            idx = get_idx(e)
+            if idx not in new_network:
+                new_network[idx] = []
+
+            for next_e in network[e]:
+                next_es = map(get_idx, network[next_e])
+                new_network[idx].extend(next_es)
+
+    return new_network
