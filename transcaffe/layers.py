@@ -10,7 +10,7 @@ Author: Yuhuang Hu
 Email : duguyue100@gmail.com
 """
 # Keras backend
-from keras.layers import Input
+from keras.layers import Input, merge
 from keras.layers.core import Activation, Dropout, Flatten, Dense
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import ZeroPadding2D, Convolution2D
@@ -144,6 +144,11 @@ def pooling(pool_size, strides, pool_type, name, border_mode="valid"):
         (stride_h, stride_w)
     border_mode : string
         border mode, currently just "valid"
+    pool_type : int
+        0 : max
+        1 : avg
+    name : string
+        the name of the pooling layer
 
     Returns
     -------
@@ -151,9 +156,9 @@ def pooling(pool_size, strides, pool_type, name, border_mode="valid"):
               keras.layers.pooling.AveragePooling2D
     """
     if LIB_TYPE == "keras":
-        if pool_type == "max":
+        if pool_type == 0:
             return MaxPooling2D(pool_size, strides, border_mode, name=name)
-        elif pool_type == "avg":
+        elif pool_type == 1:
             return AveragePooling2D(pool_size, strides, border_mode, name=name)
 
 

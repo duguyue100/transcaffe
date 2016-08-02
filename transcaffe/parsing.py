@@ -515,21 +515,28 @@ def get_model(layers, phase, input_dim, lib_type="keras"):
             if layer_type in ["relu", "sigmoid", "softmax", "softmaxwithloss",
                               "split", "tanh"]:
                 net[layer_id] = L.activation(act_type=layer_type,
-                                             name=layer_name)
+                                             name=layer_name)(layer_in)
             elif layer_type == "batchnorm":
                 epsilon = layer.batchnorm_param.eps
                 axis = layer.scale_param.axis
                 net[layer_id] = L.batch_norm(epsilon=epsilon, axis=axis,
-                                             name=layer_name)
+                                             name=layer_name)(layer_in)
             elif layer_type == "dropout":
                 prob = layer.dropout_param.dropout_ratio
-                net[layer_id] = L.dropout(prob, name=layer_name)
+                net[layer_id] = L.dropout(prob, name=layer_name)(layer_in)
             elif layer_type == "flatten":
-                net[layer_id] = L.flatten(name=layer_name)
+                net[layer_id] = L.flatten(name=layer_name)(layer_in)
+            elif layer_type == "concat":
+                axis = layer.concat_param.axis
+                net[layer_id] = L.merge(layer_in, mode='concat',
+                                        concat_axis=1, name=layer_name)
             elif layer_type == "innerproduct":
                 output_dim = layer.inner_product_param.num_output
 
-                net[layer_id] = L.dense(output_dim, name=layer_name)
+                if len(layer_in[0]._keras_shape[1:]) > 1:
+                    layer_in = L.flatten(name=layer_name+"_flatten")(layer_in)
+
+                net[layer_id] = L.dense(output_dim, name=layer_name)(layer_in)
             elif layer_type == "convolution":
                 has_bias = layer.convolution_param.bias_term
                 nb_filter = layer.convolution_param.num_output
@@ -546,10 +553,14 @@ def get_model(layers, phase, input_dim, lib_type="keras"):
                 pad_w = (layer.convolution_param.pad or
                          [layer.convolution_param.pad_w])[0]
 
+                if pad_h + pad_w > 0:
+                    layer_in = L.zeropadding(padding=(pad_h, pad_w),
+                                             name=layer_name)(layer_in)
+
                 net[layer_id] = L.convolution(nb_filter, nb_row, nb_col,
                                               bias=has_bias,
                                               subsample=(stride_h, stride_w),
-                                              name=layer_name)
+                                              name=layer_name)(layer_in)
             elif layer_type == "pooling":
                 kernel_h = layer.pooling_param.kernel_size or \
                     layer.pooling_param.kernel_h
@@ -564,13 +575,11 @@ def get_model(layers, phase, input_dim, lib_type="keras"):
                 pad_h = layer.pooling_param.pad or layer.pooling_param.pad_h
                 pad_w = layer.pooling_param.pad or layer.pooling_param.pad_w
 
-                if (layer.pooling_param.pool == 0):
-                    net.append(L.pooling(pool_size=(kernel_h, kernel_w),
-                                         strides=(stride_h, stride_w),
-                                         pool_type="max",
-                                         name=layer_name))
-                elif (layer.pooling_param.pool == 1):
-                    net[layer_id] = L.pooling(pool_size=(kernel_h, kernel_w),
-                                              strides=(stride_h, stride_w),
-                                              pool_type="avg",
-                                              name=layer_name)
+                if pad_h + pad_w > 0:
+                    layer_in = L.zeropadding(padding=(pad_h, pad_w),
+                                             name=layer_name)(layer_in)
+
+                net[layer_id] = L.pooling(pool_size=(kernel_h, kernel_w),
+                                          strides=(stride_h, stride_w),
+                                          pool_type=layer.pooling_param.pool,
+                                          name=layer_name)(layer_in)
