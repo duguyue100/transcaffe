@@ -10,6 +10,7 @@ Author: Yuhuang Hu
 Email : duguyue100@gmail.com
 """
 # Keras backend
+from keras.layers import Input
 from keras.layers.core import Activation, Dropout, Flatten, Dense
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import ZeroPadding2D, Convolution2D
@@ -182,3 +183,17 @@ def convolution(num_filter, num_row, num_col, bias, subsample, name):
         return Convolution2D(nb_filter=num_filter, nb_row=num_row,
                              nb_col=num_col, subsample=subsample, bias=bias,
                              name=name)
+
+
+def input_layer(shape, name):
+    """Get an input layer.
+
+    Parameters
+    ----------
+    shape : list
+        the input shape.
+    name : string
+        the name of the input layer
+    """
+    if LIB_TYPE == "keras":
+        return Input(shape, name)
