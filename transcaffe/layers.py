@@ -38,11 +38,11 @@ def activation(act_type, name):
     """
     if LIB_TYPE == "keras":
         if act_type in ["relu", "sigmoid"]:
-            return Activation(act_type, name=name)
+            return Activation(activation=act_type, name=name)
         elif act_type in ["softmax", "softmaxwithloss"]:
-            return Activation("softmax", name=name)
+            return Activation(activation="softmax", name=name)
         elif act_type in ["split", "tanh"]:
-            return Activation("tanh", name=name)
+            return Activation(activation="tanh", name=name)
         else:
             raise Exception("The activation type is not supported!")
 
