@@ -90,3 +90,6 @@ ENV/
 
 # Mac
 .DS_Store
+
+# protobuf
+*.prototxt
