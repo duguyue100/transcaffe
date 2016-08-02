@@ -14,6 +14,8 @@ from scipy.io import loadmat
 from transcaffe import caffe_pb2, utils
 from google.protobuf.text_format import Merge
 
+from transcaffe import layers as L
+
 v1_map = {0: 'NONE', 1: 'ACCURACY', 2: 'BNLL', 3: 'CONCAT', 4: 'CONVOLUTION',
           5: 'DATA', 6: 'DROPOUT', 7: 'EUCLIDEANLOSS', 8: 'FLATTEN',
           9: 'HDF5DATA', 10: 'HDF5OUTPUT', 11: 'IM2COL', 12: 'IMAGEDATA',
@@ -402,3 +404,173 @@ def remove_blobs(network):
                 new_network[idx].extend(next_es)
 
     return new_network
+
+
+def reverse_net(network):
+    """Reverse a network.
+
+    Parameters
+    ----------
+    network : OrderedDict
+        A parsed network
+
+    Returns
+    -------
+    rev : OrderedDict
+        reversed network
+    """
+    rev = OrderedDict()
+    for node in network.keys():
+        rev[node] = []
+    for node in network.keys():
+        for n in network[node]:
+            rev[n].append(node)
+    return rev
+
+
+def get_input_layers(network):
+    """Get input layers (layers with zero in-order).
+
+    Parameters
+    ----------
+    network : OrderedDict
+        A parsed network
+
+    Returns
+    -------
+    in_layers : list
+        a list of input layers
+    """
+    return get_output_layers(reverse_net(network))
+
+
+def get_output_layers(network):
+    """Get output layers (layers with zero out-order).
+
+    Parameters
+    ----------
+    network : OrderedDict
+        A parsed network
+
+    Returns
+    -------
+    out_layers : list
+        a list of out layers
+    """
+    out_layers = []
+    for idx in network:
+        if network[idx] == []:
+            out_layers.append(idx)
+
+    return out_layers
+
+
+def get_model(layers, phase, input_dim, lib_type="keras"):
+    """Get a model by given network parameters.
+
+    Parameters
+    ----------
+    layers : list
+        network structure by given parsed network.
+    phase : int
+        0 : train
+        1 : test
+    input_dim : list
+        the input dimension
+    lib_type : string
+        currently only Keras is supported.
+    """
+    network = get_network(layers, phase)
+    if len(network) == 0:
+        raise Exception("No valid network is parsed!")
+
+    in_layers = get_input_layers(network)
+    out_layers = get_output_layers(network)
+    rev_network = reverse_net(network)
+
+    def data_layer(x): get_layer_type(x) in ['data', 'imagedata', 'memorydata',
+                                             'hdf5data', 'windowdata']
+    # remove the link from input to output.
+    for in_idx in in_layers:
+        for out_idx in out_layers:
+            if out_idx in network[in_idx] and data_layer(layers[in_idx]):
+                network[in_idx].remove[out_idx]
+    net = [None]*(max(network)+1)
+
+    for layer_id in network:
+        layer = network[layer_id]
+        layer_name = layer.name
+        layer_type = get_layer_type(layer)
+
+        if layer_id in in_layers:
+            net[layer_id] = L.input_layer(input_dim, layer_name)
+        else:
+            layer_in = [None]*(len(rev_network[layer_id]))
+            for l in xrange(len(rev_network[layer_id])):
+                layer_in[l] = net[rev_network[layer_id][l]]
+            layer_in_names = []
+            for l in rev_network[layer_id]:
+                layer_in_names.append(layers[l].name)
+
+            if layer_type in ["relu", "sigmoid", "softmax", "softmaxwithloss",
+                              "split", "tanh"]:
+                net[layer_id] = L.activation(act_type=layer_type,
+                                             name=layer_name)
+            elif layer_type == "batchnorm":
+                epsilon = layer.batchnorm_param.eps
+                axis = layer.scale_param.axis
+                net[layer_id] = L.batch_norm(epsilon=epsilon, axis=axis,
+                                             name=layer_name)
+            elif layer_type == "dropout":
+                prob = layer.dropout_param.dropout_ratio
+                net[layer_id] = L.dropout(prob, name=layer_name)
+            elif layer_type == "flatten":
+                net[layer_id] = L.flatten(name=layer_name)
+            elif layer_type == "innerproduct":
+                output_dim = layer.inner_product_param.num_output
+
+                net[layer_id] = L.dense(output_dim, name=layer_name)
+            elif layer_type == "convolution":
+                has_bias = layer.convolution_param.bias_term
+                nb_filter = layer.convolution_param.num_output
+                nb_col = (layer.convolution_param.kernel_size or
+                          [layer.convolution_param.kernel_h])[0]
+                nb_row = (layer.convolution_param.kernel_size or
+                          [layer.convolution_param.kernel_w])[0]
+                stride_h = (layer.convolution_param.stride or
+                            [layer.convolution_param.stride_h])[0] or 1
+                stride_w = (layer.convolution_param.stride or
+                            [layer.convolution_param.stride_w])[0] or 1
+                pad_h = (layer.convolution_param.pad or
+                         [layer.convolution_param.pad_h])[0]
+                pad_w = (layer.convolution_param.pad or
+                         [layer.convolution_param.pad_w])[0]
+
+                net[layer_id] = L.convolution(nb_filter, nb_row, nb_col,
+                                              bias=has_bias,
+                                              subsample=(stride_h, stride_w),
+                                              name=layer_name)
+            elif layer_type == "pooling":
+                kernel_h = layer.pooling_param.kernel_size or \
+                    layer.pooling_param.kernel_h
+                kernel_w = layer.pooling_param.kernel_size or \
+                    layer.pooling_param.kernel_w
+
+                stride_h = layer.pooling_param.stride or \
+                    layer.pooling_param.stride_h or 1
+                stride_w = layer.pooling_param.stride or \
+                    layer.pooling_param.stride_w or 1
+
+                pad_h = layer.pooling_param.pad or layer.pooling_param.pad_h
+                pad_w = layer.pooling_param.pad or layer.pooling_param.pad_w
+
+                if (layer.pooling_param.pool == 0):
+                    net.append(L.pooling(pool_size=(kernel_h, kernel_w),
+                                         strides=(stride_h, stride_w),
+                                         pool_type="max",
+                                         name=layer_name))
+                elif (layer.pooling_param.pool == 1):
+                    net[layer_id] = L.pooling(pool_size=(kernel_h, kernel_w),
+                                              strides=(stride_h, stride_w),
+                                              pool_type="avg",
+                                              name=layer_name)
