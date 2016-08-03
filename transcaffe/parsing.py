@@ -31,6 +31,45 @@ v1_map = {0: 'NONE', 1: 'ACCURACY', 2: 'BNLL', 3: 'CONCAT', 4: 'CONVOLUTION',
           38: 'EXP', 39: 'DECONVOLUTION'}
 
 
+def load(model_def, model_bin, target_lib="keras"):
+    """Load a Caffe model and convert to target library.
+
+    Parameters
+    ----------
+    model_def : string
+        absolute path of a given .protobuf text
+    model_bin : string
+        absolute path of a given .caffemodel binary
+    target_lib : string
+        target library, currently only Keras is supported.
+
+        In planning: Lasagne, TensorFlow
+
+    Returns
+    -------
+    model : keras.models.model
+        a loaded model.
+    """
+    print ("[MESSAGE] Target model is loading...")
+    net_param = parse_protobuf(model_def)
+    layers, version = get_layers(net_param)
+    input_dim = get_input_size(net_param)
+    model = get_model(layers, 1, tuple(input_dim[1:]), net_param.name)
+    print ("[MESSAGE] Printing converted model...")
+    model.summary()
+    print ("[MESSAGE] The model is built.")
+
+    print ("[MESSAGE] Parsing network parameters...")
+    param_layers, _ = parse_caffemodel(model_bin)
+    net_weights = get_network_weights(param_layers, version)
+
+    print ("[MESSAGE] Loading parameters into network...")
+    build_model(model, net_weights)
+    print ("[MESSAGE] The model is loaded successfully.")
+
+    return model
+
+
 def parse_caffemodel(filename):
     """Parse a given caffemodel.
 
