@@ -2,10 +2,6 @@
 
 All backends shares same interface. (hopefully)
 
-Following layers not yet supported by Keras:
-- LRN2D
-- Scale
-
 Author: Yuhuang Hu
 Email : duguyue100@gmail.com
 """
@@ -15,6 +11,8 @@ from keras.layers.core import Activation, Dropout, Flatten, Dense
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import ZeroPadding2D, Convolution2D
 from keras.layers.pooling import MaxPooling2D, AveragePooling2D
+
+from transcaffe.extra import KerasScale, KerasLRN2D
 
 LIB_TYPE = "keras"
 
@@ -206,3 +204,41 @@ def input_layer(shape, name):
     """
     if LIB_TYPE == "keras":
         return Input(shape=shape, name=name)
+
+
+def lrn(alpha, k, beta, n, name):
+    """Get an LRN layer.
+
+    Parameters
+    ----------
+    alpha : float
+        the scaling parameter
+    k : float
+        K parameter
+    beta : float
+        the exponent
+    n : int
+         the number of channels to sum over (for cross channel LRN) or
+         the side length of the square region to sum over (for within
+         channel LRN)
+
+    Returns
+    -------
+    lrn : transcaffe.extra.KerasLRN2D
+    """
+    if LIB_TYPE == "keras":
+        return KerasLRN2D(alpha=alpha, k=k, beta=beta, n=n, name=name)
+
+
+def scale(axis, name):
+    """Get a Scale layer.
+
+    Parameters
+    ----------
+    axis : int
+        axis along which to normalize in mode 0. For instance,
+        if your input tensor has shape (samples, channels, rows, cols),
+        set axis to 1 to normalize per feature map (channels axis).
+    """
+    if LIB_TYPE == "keras":
+        return KerasScale(axis=axis, name=name)

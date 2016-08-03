@@ -438,6 +438,17 @@ def get_model(layers, phase, input_dim, model_name, lib_type="keras"):
                 axis = layer.scale_param.axis
                 net[layer_id] = L.batch_norm(epsilon=epsilon, axis=axis,
                                              name=layer_name)(layer_in)
+            elif layer_type == "lrn":
+                alpha = layer.lrn_param.alpha
+                k = layer.lrn_param.k
+                beta = layer.lrn_param.beta
+                n = layer.lrn_param.local_size
+
+                net[layer_id] = L.lrn(alpha, k, beta, n, layer_name)(layer_in)
+            elif layer_type == "scale":
+                axis = layer.scale_param.axis
+
+                net[layer_id] = L.scale(axis, layer_name)(layer_in)
             elif layer_type == "dropout":
                 prob = layer.dropout_param.dropout_ratio
                 net[layer_id] = L.dropout(prob, name=layer_name)(layer_in)
@@ -447,6 +458,21 @@ def get_model(layers, phase, input_dim, model_name, lib_type="keras"):
                 axis = layer.concat_param.axis
                 net[layer_id] = L.merge(layer_in, mode='concat',
                                         concat_axis=1, name=layer_name)
+            elif layer_type == "eltwise":
+                axis = layer.scale_param.axis
+                op = layer.eltwise_param.operation
+
+                if op == 0:
+                    mode = "mul"
+                elif op == 1:
+                    mode = "sum"
+                elif op == 2:
+                    mode == "max"
+                else:
+                    raise NotImplementedError("Operation is not implemented!")
+
+                net[layer_id] = L.merge(layer_in, mode=mode, concat_axis=axis,
+                                        name=layer_name)
             elif layer_type == "innerproduct":
                 output_dim = layer.inner_product_param.num_output
 
