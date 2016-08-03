@@ -24,6 +24,7 @@ before_install:
     - conda info -a
     - conda update --yes conda
     - conda install --yes pip
+    - conda install --yes scipy
     - conda install --yes nose
 
 install:
