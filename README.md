@@ -25,11 +25,18 @@ popular libraries too.
 
 ## Todo List
 
--   [ ] parse the prototxt
--   [ ] parse the .caffemodel
--   [ ] functions for call out parameters
+-   [x] parse the prototxt
+-   [x] parse the .caffemodel
+-   [x] functions for call out parameters
 -   [ ] possible drawing functions
--   [ ] reading and writing utility functions
+-   [x] reading and writing utility functions
+-   [ ] check on CIFAR-10 NIN models (why it's not loading correctly)
+-   [ ] compare the activation of MNIST with torch model.
+-   [ ] try to load with VGG-16, VGG-19 (compare with [this](https://github.com/fchollet/deep-learning-models))
+-   [ ] More support layers for SNN (LRN, Batch Normalization, etc)
+-   [ ] More support activation functiosn for SNN
+-   [ ] Planning on lasagne loading functions
+-   [ ] Possible to parse torch model as well?
 
 ## Contacts
 

@@ -12,8 +12,6 @@ import os
 from keras.datasets import mnist as dataset
 from keras.utils import np_utils
 
-from transcaffe import parsing
-
 import transcaffe as tc
 
 batch_size = 128
