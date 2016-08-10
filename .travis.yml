@@ -28,7 +28,6 @@ before_install:
     - source activate python"$TRAVIS_PYTHON_VERSION"
     - conda install --yes pip
     - conda install --yes scipy
-    - conda install --yes protobuf
     - conda install --yes nose
 
 install:
