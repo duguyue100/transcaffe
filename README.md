@@ -15,6 +15,10 @@ the second stage, I would like to develop a more obvious network coding
 and save it into HDF5 format. On the final stage, I hope that I can create
 a model zoo where I deliver this HDF5 format data.
 
+__NOTICE__: Apparently `protobuf` does not support `python 3` that well. I've
+tested all `python 3.3, 3.4 and 3.5` and they are all failed. At this point,
+please use this package with `Python 2.7`.
+
 __DEVELOPMENT__: Keras obviously provides a much more mature organization on
 saving trained models. My further development is inspired by one recent
 development by [MarcBS's Caffe2Keras module](https://github.com/MarcBS/keras/tree/master/keras/caffe).
