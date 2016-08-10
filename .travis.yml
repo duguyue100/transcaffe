@@ -24,7 +24,7 @@ before_install:
     - export PATH=/home/travis/miniconda/bin:$PATH
     - conda info -a
     - conda update --yes conda
-    - conda create -q --name python"$TRAVIS_PYTHON_VERSION" python="$TRAVIS_PYTHON_VERSION"
+    - conda create --yes -q --name python"$TRAVIS_PYTHON_VERSION" python="$TRAVIS_PYTHON_VERSION"
     - activate python%PYTHON_VERSION%
     - conda install --yes pip
     - conda install --yes scipy
