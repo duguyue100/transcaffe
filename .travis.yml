@@ -25,7 +25,7 @@ before_install:
     - conda info -a
     - conda update --yes conda
     - conda create --yes -q --name python"$TRAVIS_PYTHON_VERSION" python="$TRAVIS_PYTHON_VERSION"
-    - source activate python%PYTHON_VERSION%
+    - source activate python"$TRAVIS_PYTHON_VERSION"
     - conda install --yes pip
     - conda install --yes scipy
     - conda install --yes protobuf
