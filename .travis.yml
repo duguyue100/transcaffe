@@ -28,6 +28,9 @@ before_install:
     - source activate python"$TRAVIS_PYTHON_VERSION"
     - conda install --yes pip
     - conda install --yes scipy
+    - if [[ "$TRAVIS_PYTHON_VERSION" == "3.3" ]]; then
+        conda install --yes h5py
+      fi
     - conda install --yes nose
 
 install:
